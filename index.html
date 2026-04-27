@@ -295,15 +295,6 @@ tr:hover td{background:var(--surface2)}
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 13c0-3 2.5-5 6-5s6 2 6 5"/></svg>
         Usuarios
       </button>
-      <div class="nav-section-label">Datos</div>
-      <button class="nav-btn" id="nav-calories" onclick="showPanel('calories')">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2C5 2 3 4.5 3 7c0 2.5 2 4.5 5 6 3-1.5 5-3.5 5-6 0-2.5-2-5-5-5z"/></svg>
-        Calorías
-      </button>
-      <button class="nav-btn" id="nav-steps" onclick="showPanel('steps')">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-6 3 3.5 2-2.5 3 5"/></svg>
-        Pasos
-      </button>
       <div class="nav-section-label">Catálogo</div>
       <button class="nav-btn" id="nav-ingredients" onclick="showPanel('ingredients')">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><path d="M8 5v3l2 2"/></svg>
@@ -373,41 +364,7 @@ tr:hover td{background:var(--surface2)}
             </tbody>
           </table>
         </div>
-      </div>
-
-      <!-- CALORIES -->
-      <div class="panel" id="panel-calories">
-        <div class="date-row">
-          <div class="date-ctrl">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/></svg>
-            <input type="date" id="cal-date" onchange="loadCalories()">
-          </div>
-          <button class="btn-sm" onclick="loadCalories()">Buscar</button>
-        </div>
-        <div id="cal-body">
-          <div class="empty"><div class="empty-icon">📅</div><p>Selecciona una fecha para ver el resumen</p></div>
-        </div>
-      </div>
-
-      <!-- STEPS -->
-      <div class="panel" id="panel-steps">
-        <div class="date-row">
-          <div class="date-ctrl">
-            <span>Desde</span>
-            <input type="date" id="s-start" onchange="loadSteps()">
-          </div>
-          <div class="date-ctrl">
-            <span>Hasta</span>
-            <input type="date" id="s-end" onchange="loadSteps()">
-          </div>
-          <button class="btn-sm" onclick="loadSteps()">Buscar</button>
-        </div>
-        <div id="steps-body">
-          <div class="empty"><div class="empty-icon">📅</div><p>Selecciona un rango de fechas</p></div>
-        </div>
-      </div>
-
-      <!-- INGREDIENTS -->
+      </div><!-- INGREDIENTS -->
       <div class="panel" id="panel-ingredients">
         <div class="tbl-wrap">
           <table>
@@ -560,11 +517,6 @@ function initApp(){
   const name=currentUser.username||currentUser.email.split('@')[0];
   document.getElementById('sb-name').textContent=name;
   document.getElementById('sb-ava').textContent=name.slice(0,2).toUpperCase();
-  const today=new Date().toISOString().split('T')[0];
-  document.getElementById('cal-date').value=today;
-  const week=new Date(Date.now()-7*86400000).toISOString().split('T')[0];
-  document.getElementById('s-start').value=week;
-  document.getElementById('s-end').value=today;
   loadRecipes();
 }
 
@@ -577,25 +529,25 @@ function doLogout(){
 }
 
 function showPanel(name){
-  ['recipes','users','calories','steps','ingredients'].forEach(p=>{
+  ['recipes','users','ingredients'].forEach(p=>{
     document.getElementById('panel-'+p).classList.remove('active');
     document.getElementById('nav-'+p).classList.remove('active');
   });
   document.getElementById('panel-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
-  const titles={recipes:'Recetas',users:'Usuarios',calories:'Resumen de calorías',steps:'Registro de pasos',ingredients:'Ingredientes'};
+  const titles={recipes:'Recetas',users:'Usuarios',ingredients:'Ingredientes'};
   document.getElementById('topbar-title').textContent=titles[name];
   if(name==='users'&&!allUsers.length) loadUsers();
   if(name==='ingredients'&&!allIng.length) loadIngredients();
-  if(name==='calories') loadCalories();
-  if(name==='steps') loadSteps();
 }
 
 // ── RECIPES ──
 async function loadRecipes(){
   const tbody=document.getElementById('r-tbody');
   tbody.innerHTML='<tr><td class="loading-cell" colspan="6"><span class="spin"></span></td></tr>';
+  console.log('[Qorifit] Starting loadRecipes, token length:', token.length);
   try{
+    console.log('[Qorifit] Fetching:', BASE+'/recipes');
     const res=await fetch(`${BASE}/recipes`,{headers:hdrs()});
     const json=await res.json();
     if(isOk(json)){
@@ -605,46 +557,42 @@ async function loadRecipes(){
       tbody.innerHTML=`<tr><td class="loading-cell" colspan="6" style="color:var(--red)">${h(json.message||'Error del servidor')}</td></tr>`;
     }
   } catch(e){
-    tbody.innerHTML='<tr><td class="loading-cell" colspan="6" style="color:var(--text3)">Error de conexión</td></tr>';
+    console.error('[Qorifit] loadRecipes error:', e.message, e.stack);
+    tbody.innerHTML='<tr><td class="loading-cell" colspan="6" style="color:var(--text3)">Error: '+e.message+'</td></tr>';
   }
 }
 
 function renderRecipes(list){
   const tbody=document.getElementById('r-tbody');
-  document.getElementById('r-count').textContent=list.length?`${list.length} receta${list.length===1?'':'s'}`:'';
-  if(list.length>0) console.log('[Qorifit] Estructura de receta:', JSON.stringify(list[0], null, 2));
+  document.getElementById('r-count').textContent=list.length?(list.length+' receta'+(list.length===1?'':'s')):'';
   if(!list.length){
     tbody.innerHTML='<tr><td class="loading-cell" colspan="6" style="color:var(--text3)">Sin recetas</td></tr>';
     return;
   }
-  tbody.innerHTML=list.map(r=>{
-    const rid = r.id ?? r.recipeId ?? r.recipe_id ?? r.ID ?? null;
-    return `
-    <tr>
-      <td>
-        <div class="recipe-cell">
-          ${r.imageUrl
-            ? `<img class="recipe-thumb" src="${h(r.imageUrl)}" onerror="this.style.display='none'">`
-            : `<div class="recipe-ph">🍽</div>`}
-          <span style="font-weight:500">${h(r.name)}</span>
-        </div>
-      </td>
-      <td style="font-family:var(--mono)">${r.estimatedCalories!=null?r.estimatedCalories+' kcal':'–'}</td>
-      <td>${r.countryName?`<span class="badge badge-green">${h(r.countryName)}</span>`:r.countryId==1?'<span class="badge badge-green">Perú</span>':r.countryId?`#${r.countryId}`:'–'}</td>
-      <td>${stars(r.popularity)}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text3)">#${rid??'–'}</td>
-      <td>
-        <div class="act-btns">
-          <button class="btn-icon view" onclick="viewRecipe(${rid})" title="Ver detalle">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
-          </button>
-          <button class="btn-icon edit" onclick="editRecipe(${rid})" title="Editar">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
-          </button>
-        </div>
-      </td>
-    </tr>
-  `;
+  tbody.innerHTML=list.map(function(r){
+    const rid=r.recipeId||r.id||null;
+    const img=r.imagePath||r.imageUrl||'';
+    const imgEl=img
+      ?('<img class="recipe-thumb" src="'+h(img)+'" onerror="this.style.display=\'none\'">')
+      :'<div class="recipe-ph">\u1F37D</div>';
+    const country=r.countryName
+      ?('<span class="badge badge-green">'+h(r.countryName)+'</span>')
+      :(r.countryId==1?'<span class="badge badge-green">Per\u00FA</span>':(r.countryId?'#'+r.countryId:'\u2013'));
+    return '<tr>'
+      +'<td><div class="recipe-cell">'+imgEl+'<span style="font-weight:500">'+h(r.name)+'</span></div></td>'
+      +'<td style="font-family:var(--mono)">'+(r.estimatedCalories!=null?r.estimatedCalories+' kcal':'\u2013')+'</td>'
+      +'<td>'+country+'</td>'
+      +'<td>'+stars(r.popularity)+'</td>'
+      +'<td style="font-family:var(--mono);font-size:11px;color:var(--text3)">#'+(rid||'\u2013')+'</td>'
+      +'<td><div class="act-btns">'
+      +'<button class="btn-icon view" onclick="viewRecipe('+rid+')" title="Ver detalle">'
+      +'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"></path><circle cx="8" cy="8" r="2"></circle></svg>'
+      +'</button>'
+      +'<button class="btn-icon edit" onclick="editRecipe('+rid+')" title="Editar">'
+      +'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z"></path></svg>'
+      +'</button>'
+      +'</div></td>'
+      +'</tr>';
   }).join('');
 }
 
@@ -830,6 +778,7 @@ async function loadUsers(){
     const json=await res.json();
     if(isOk(json)){
       allUsers=json.data||[];
+      if(allUsers.length>0) console.log('[Qorifit] User object:', JSON.stringify(allUsers[0], null, 2));
       renderUsers(allUsers);
     } else {
       tbody.innerHTML=`<tr><td class="loading-cell" colspan="4" style="color:var(--text2)">${h(json.message||'Endpoint no disponible aún')}</td></tr>`;
@@ -839,141 +788,43 @@ async function loadUsers(){
   }
 }
 
+function getUserStatus(u){
+  // Try all possible field names the API might use
+  const s = u.status ?? u.active ?? u.enabled ?? u.isActive ?? null;
+  // Treat null/undefined as active (default), explicit false/0 as inactive
+  return s===false || s===0 || s==='false' || s==='INACTIVE' || s==='inactive' ? false : true;
+}
+
 function renderUsers(list){
   const tbody=document.getElementById('u-tbody');
-  if(!list.length){tbody.innerHTML='<tr><td class="loading-cell" colspan="4" style="color:var(--text3)">Sin usuarios</td></tr>';return}
-  tbody.innerHTML=list.map(u=>`
-    <tr>
-      <td>
-        <div class="user-cell">
-          <div class="u-ava">${(u.username||u.email||'U').slice(0,2).toUpperCase()}</div>
-          <span style="font-weight:500">${h(u.username||'–')}</span>
-        </div>
-      </td>
-      <td style="color:var(--text2)">${h(u.email||'–')}</td>
-      <td><span class="badge ${u.status===false?'badge-gray':'badge-green'}">${u.status===false?'Inactivo':'Activo'}</span></td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text3)">#${u.userId}</td>
-      <td>
-        <button 
-          onclick="toggleUser(${u.userId}, ${u.status===false?true:false})"
-          style="padding:4px 10px;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid;transition:all 0.15s;background:${u.status===false?'var(--green-bg)':'var(--red-bg)'};color:${u.status===false?'var(--green)':'var(--red)'};border-color:${u.status===false?'rgba(76,175,130,0.4)':'rgba(224,80,80,0.4)'}"
-        >${u.status===false?'Activar':'Desactivar'}</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// ── CALORIES ──
-async function loadCalories(){
-  const date=document.getElementById('cal-date').value;
-  if(!date) return;
-  const body=document.getElementById('cal-body');
-  body.innerHTML='<div style="text-align:center;padding:3rem"><span class="spin"></span></div>';
-  try{
-    const res=await fetch(`${BASE}/calories/summary?date=${date}`,{headers:hdrs()});
-    const json=await res.json();
-    if(isOk(json)&&json.data){
-      const d=json.data;
-      const meals=d.meals||[];
-      const pct=d.maxCaloriesPerDay?Math.min(100,Math.round((d.totalCalories/d.maxCaloriesPerDay)*100)):0;
-      const over=pct>=100;
-      body.innerHTML=`
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Calorías consumidas</div>
-            <div class="stat-value" style="color:${over?'var(--accent)':'var(--text)'}">${(d.totalCalories||0).toLocaleString()}</div>
-            <div class="prog-wrap"><div class="prog ${over?'':'green'}" style="width:${pct}%"></div></div>
-            <div class="stat-sub">Meta: ${(d.maxCaloriesPerDay||0).toLocaleString()} kcal · ${pct}%</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Comidas registradas</div>
-            <div class="stat-value">${meals.length}</div>
-            <div class="stat-sub">el ${date}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Balance</div>
-            <div class="stat-value" style="color:${over?'var(--accent)':'var(--green)'}">${over?'+':''}${Math.abs((d.maxCaloriesPerDay||0)-(d.totalCalories||0)).toLocaleString()}</div>
-            <div class="stat-sub">${over?'sobre la meta':'restante'}</div>
-          </div>
-        </div>
-        ${meals.length?`
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px">Comidas del día</div>
-          <div class="meals-list">
-            ${meals.map(m=>`
-              <div class="meal-row">
-                <div>
-                  <div class="meal-name">${h(m.mealName||'')}</div>
-                  <div class="meal-type-label">${MEAL_NAMES[m.mealType]||m.mealType}</div>
-                </div>
-                <div class="meal-kcal">${(m.totalCalories||0).toLocaleString()} kcal</div>
-              </div>`).join('')}
-          </div>`
-        :'<div class="empty"><div class="empty-icon">🍽</div><p>Sin comidas registradas ese día</p></div>'}
-      `;
-    } else {
-      body.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>Sin datos para esa fecha</p></div>';
-    }
-  } catch(e){
-    body.innerHTML='<div class="empty"><p style="color:var(--red)">Error al conectar con la API</p></div>';
-  }
-}
-
-// ── STEPS ──
-async function loadSteps(){
-  const start=document.getElementById('s-start').value;
-  const end=document.getElementById('s-end').value;
-  if(!start) return;
-  const body=document.getElementById('steps-body');
-  body.innerHTML='<div style="text-align:center;padding:3rem"><span class="spin"></span></div>';
-  try{
-    const res=await fetch(`${BASE}/step`,{
-      method:'GET',headers:hdrs(),
-      body:JSON.stringify({startDate:start,endDate:end||undefined})
-    });
-    const json=await res.json();
-    if(isOk(json)&&json.data?.length){
-      const data=json.data;
-      const total=data.reduce((s,d)=>s+(d.stepCount||0),0);
-      const avg=Math.round(total/data.length);
-      const GOAL=10000;
-      const max=Math.max(...data.map(d=>d.stepCount||0))||1;
-      const activeDays=data.filter(d=>(d.stepCount||0)>=GOAL).length;
-      body.innerHTML=`
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Total de pasos</div>
-            <div class="stat-value">${total.toLocaleString()}</div>
-            <div class="stat-sub">${data.length} días con registro</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Promedio diario</div>
-            <div class="stat-value" style="color:${avg>=GOAL?'var(--green)':'var(--text)'}">${avg.toLocaleString()}</div>
-            <div class="stat-sub">Meta: ${GOAL.toLocaleString()}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Días con meta</div>
-            <div class="stat-value" style="color:var(--green)">${activeDays}</div>
-            <div class="stat-sub">de ${data.length} días</div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:1.25rem">
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:4px">Pasos por día</div>
-          <div class="bars-wrap">
-            ${data.slice(-14).map(d=>{
-              const pct=Math.round(((d.stepCount||0)/max)*100);
-              const good=(d.stepCount||0)>=GOAL;
-              const label=(d.stepCount||0)>=1000?((d.stepCount/1000).toFixed(1)+'k'):String(d.stepCount||0);
-              return `<div class="bar-col"><div class="bar-count">${label}</div><div class="bar${good?' good':''}" style="height:${pct}%"></div><div class="bar-date">${(d.date||'').slice(5)}</div></div>`;
-            }).join('')}
-          </div>
-        </div>
-      `;
-    } else {
-      body.innerHTML='<div class="empty"><div class="empty-icon">🚶</div><p>Sin datos para ese rango</p></div>';
-    }
-  } catch(e){
-    body.innerHTML='<div class="empty"><p style="color:var(--text3)">El endpoint GET /step con body puede no estar soportado por el navegador (CORS con body en GET). Funciona desde Postman.</p></div>';
-  }
+  if(!list.length){tbody.innerHTML='<tr><td class="loading-cell" colspan="5" style="color:var(--text3)">Sin usuarios</td></tr>';return}
+  const rows=list.map(function(u){
+    const active=getUserStatus(u);
+    const name=u.username||u.name||'';
+    const initials=(name||u.email||'U').slice(0,2).toUpperCase();
+    const badgeClass=active?'badge-green':'badge-gray';
+    const badgeText=active?'Activo':'Inactivo';
+    const btnBg=active?'var(--red-bg)':'var(--green-bg)';
+    const btnColor=active?'var(--red)':'var(--green)';
+    const btnBorder=active?'rgba(224,80,80,0.4)':'rgba(76,175,130,0.4)';
+    const btnText=active?'Desactivar':'Activar';
+    const btnNext=active?'false':'true';
+    return '<tr>'
+      +'<td><div class="user-cell">'
+      +'<div class="u-ava">'+initials+'</div>'
+      +'<span style="font-weight:500">'+h(name||'–')+'</span>'
+      +'</div></td>'
+      +'<td style="color:var(--text2)">'+h(u.email||'–')+'</td>'
+      +'<td><span class="badge status-badge '+badgeClass+'">'+badgeText+'</span></td>'
+      +'<td style="font-family:var(--mono);font-size:11px;color:var(--text3)">#'+u.userId+'</td>'
+      +'<td><button onclick="toggleUser('+u.userId+','+btnNext+',this)"'
+      +' style="padding:4px 10px;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:500;'
+      +'cursor:pointer;border:0.5px solid;transition:all 0.15s;'
+      +'background:'+btnBg+';color:'+btnColor+';border-color:'+btnBorder+'">'
+      +btnText+'</button></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=rows.join('');
 }
 
 // ── INGREDIENTS ──
@@ -1008,22 +859,61 @@ function renderIng(list){
 
 
 // ── TOGGLE USER STATUS ──
-async function toggleUser(userId, newStatus){
+async function toggleUser(userId, newStatus, btnEl){
+  btnEl.disabled=true;
+  btnEl.textContent='Guardando…';
   try{
+    const userObj=allUsers.find(function(u){return u.userId===userId;})||{};
+    const payload={
+      userId: userId,
+      status: newStatus,
+      username: userObj.username||userObj.name||null,
+      email: userObj.email||null,
+      imageUrl: userObj.imageUrl||userObj.imagePath||null
+    };
+    console.log('[Qorifit] PATCH /user payload:', JSON.stringify(payload));
     const res=await fetch(`${BASE}/user`,{
       method:'PATCH',
       headers:hdrs(),
-      body:JSON.stringify({userId: userId, status: newStatus})
+      body:JSON.stringify(payload)
     });
     const json=await res.json();
     if(isOk(json)){
+      // Update local array status only — never touch name/email
+      const u=allUsers.find(function(x){return x.userId===userId;});
+      if(u) u.status=newStatus;
+      // Update badge
+      const row=btnEl.closest('tr');
+      const badge=row.querySelector('.status-badge');
+      if(badge){
+        badge.className='badge status-badge '+(newStatus?'badge-green':'badge-gray');
+        badge.textContent=newStatus?'Activo':'Inactivo';
+      }
+      // Update button
+      btnEl.disabled=false;
+      if(newStatus){
+        btnEl.textContent='Desactivar';
+        btnEl.style.background='var(--red-bg)';
+        btnEl.style.color='var(--red)';
+        btnEl.style.borderColor='rgba(224,80,80,0.4)';
+        btnEl.onclick=function(){toggleUser(userId,false,btnEl);};
+      } else {
+        btnEl.textContent='Activar';
+        btnEl.style.background='var(--green-bg)';
+        btnEl.style.color='var(--green)';
+        btnEl.style.borderColor='rgba(76,175,130,0.4)';
+        btnEl.onclick=function(){toggleUser(userId,true,btnEl);};
+      }
       toast(newStatus?'Usuario activado':'Usuario desactivado', newStatus?'ok':'');
-      loadUsers();
     } else {
       toast(json.message||'Error al cambiar estado','err');
+      btnEl.disabled=false;
+      btnEl.textContent=newStatus===false?'Desactivar':'Activar';
     }
   } catch(e){
     toast('Error de conexión','err');
+    btnEl.disabled=false;
+    btnEl.textContent=newStatus===false?'Desactivar':'Activar';
   }
 }
 
